@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hogwarts Escape Room - Module E</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        body {
+            background-color: #0b0d17;
+            color: #e0e0e0;
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1506354666786-959d6d497f1a?auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-attachment: fixed;
+        }
+        .container {
+            width: 90%;
+            max-width: 850px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(116, 0, 1, 0.6);
+            border: 2px solid #740001;
+            text-align: center;
+        }
+        h1 { color: #ffd700; text-shadow: 3px 3px #ae0001; font-size: 2.2em; margin-bottom: 10px; }
+        .house-container { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }
+        .house-option { cursor: pointer; transition: 0.3s; width: 110px; text-align: center; border: 2px solid transparent; border-radius: 10px; padding: 5px; }
+        .house-option img { width: 80px; height: 100px; object-fit: contain; }
+        .house-option:hover, .selected-house { transform: scale(1.1); border-color: #ffd700; background: rgba(255, 215, 0, 0.1); }
+        .timer { font-size: 2.5em; color: #ff4500; font-weight: bold; margin: 15px 0; font-family: monospace; text-shadow: 0 0 10px #ff4500; }
+        .stage-box { background: #1a2a3a; padding: 25px; border-radius: 15px; text-align: left; direction: ltr; line-height: 1.8; border-left: 5px solid #ffd700; margin-bottom: 20px; font-size: 1.15em; }
+        .word-bank { background: #222; padding: 15px; border: 1px dashed #ffd700; margin-bottom: 20px; font-weight: bold; color: #ffd700; text-align: center; border-radius: 10px; }
+        input[type="text"] { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ffd700; background: #222; color: white; font-size: 1.1em; text-align: center; }
+        button { background: #740001; color: #ffd700; border: 2px solid #ffd700; padding: 12px 35px; font-size: 1.1em; font-weight: bold; cursor: pointer; border-radius: 10px; transition: 0.3s; }
+        button:hover { background: #ae0001; box-shadow: 0 0 15px #ffd700; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="intro-screen">
+    <h1>🧙‍♂️ غرفة هروب: معركة هوجوورتس</h1>
+    <p>لقد حاصركم لورد فولديمورت! فكوا رموز التعاويذ للنجاة وتدمير الهوركروكس.</p>
+    <input type="text" id="teamName" placeholder="أدخل اسم المجموعة المغامرة...">
+    <h3>اختر بيتك في هوجوورتس:</h3>
+    <div class="house-container">
+        <div class="house-option" onclick="selectHouse('Gryffindor', this)">
+            <img src="https://m.media-amazon.com/images/I/71u9B6v5rHL._AC_SL1500_.jpg" alt="Gryffindor"><p>Gryffindor</p>
+        </div>
+        <div class="house-option" onclick="selectHouse('Slytherin', this)">
+            <img src="https://m.media-amazon.com/images/I/71I9-U7+A4L._AC_SL1500_.jpg" alt="Slytherin"><p>Slytherin</p>
+        </div>
+        <div class="house-option" onclick="selectHouse('Ravenclaw', this)">
+            <img src="https://m.media-amazon.com/images/I/71o0W1G6pTL._AC_SL1500_.jpg" alt="Ravenclaw"><p>Ravenclaw</p>
+        </div>
+        <div class="house-option" onclick="selectHouse('Hufflepuff', this)">
+            <img src="https://m.media-amazon.com/images/I/71V2M9vA8WL._AC_SL1500_.jpg" alt="Hufflepuff"><p>Hufflepuff</p>
+        </div>
+    </div>
+    <button onclick="startGame()">ابدأ المهمة (45 دقيقة) ⚡</button>
+</div>
+
+<div class="container hidden" id="game-screen">
+    <div style="display: flex; justify-content: space-between; color: #ffd700; font-weight: bold;">
+        <span id="display-team">المجموعة: </span>
+        <span id="display-house">البيت: </span>
+    </div>
+    <div class="timer" id="timer">45:00</div>
+    <h2 id="stage-title" style="color: #ffd700; text-decoration: underline;"></h2>
+    <div id="stage-content"></div>
+    <input type="text" id="code-input" placeholder="أدخل الكود هنا...">
+    <br>
+    <button onclick="verifyCode()">تحقق من التعويذة 🔓</button>
+</div>
+
+<script>
+    let timerInterval;
+    let timeLeft = 45 * 60;
+    let currentStage = 1;
+    let selectedHouseName = "";
+
+    const stages = [
+        {
+            title: "Stage 1: Dungeon Riddles (List A)",
+            desc: "<b>Solve the 5 riddles. The code is the TOTAL sum of letters in the 5 answers:</b><br><br>" +
+                  "1. I am not old, I am not grey, I was just picked or made today...<br>" +
+                  "2. In your mind, you are not sure. You need a sign, you need some more...<br>" +
+                  "3. I’m not the best, I’m not the worst, I’m in the middle, not last or first...<br>" +
+                  "4. Something happened, a party or a ball. A special thing inside the hall...<br>" +
+                  "5. I’m not a video or a sound, in a mirror or a photo I am found...",
+            code: "27"
+        },
+        {
+            title: "Stage 2: Library of Secrets (Definitions)",
+            desc: "<b>Find the words for these definitions. The code is the alphabetical position of the FIRST letter of each word (A=1, B=2, C=3, D=4):</b><br><br>" +
+                  "1. Able to be seen or understood clearly; it is not hidden.<br>" +
+                  "2. Suitable or right for a particular situation or occasion.<br>" +
+                  "3. A period of exactly ten years.",
+            code: "114"
+        },
+        {
+            title: "Stage 3: Forbidden Forest (Vocabulary Mastery)",
+            desc: "<b>Solve the tasks. The code is made of the FIRST letter of each answer in order:</b><br><br>" +
+                  "1. What is the synonym of 'Significant' in List A?<br>" +
+                  "2. What is the opposite of 'Unlikely'?<br>" +
+                  "3. Translate 'بفضل' to English (2 words).<br><br>" +
+                  "<i>Hint: If answers were Magic, Love, Time, the code would be MLT.</i>",
+            code: "MLT"
+        },
+        {
+            title: "Stage 4: The Final Duel (Sentence Completion)",
+            desc: "<div class='word-bank'>Word Bank: Acquire, Consequences, Complex, Analyze, In the long run</div>" +
+                  "<b>Complete the 5 sentences. The final password to destroy Voldemort is:</b><br><br>" +
+                  "1. To solve this mystery, the detective must ____ every detail.<br>" +
+                  "2. Global warming will have serious ____ on our future.<br>" +
+                  "3. The human brain is a very ____ organ to understand.<br>" +
+                  "4. Learning is hard now, but ____ it will be worth it.<br>" +
+                  "5. You need time to ____ new language skills.<br><br>" +
+                  "<center><b style='color:#ffd700'>Final Spell: EXPECTO PATRONUM</b></center>",
+            code: "EXPECTO PATRONUM"
+        }
+    ];
+
+    function selectHouse(house, element) {
+        document.querySelectorAll('.house-option').forEach(el => el.classList.remove('selected-house'));
+        element.classList.add('selected-house');
+        selectedHouseName = house;
+    }
+
+    function startGame() {
+        const team = document.getElementById('teamName').value;
+        if (!team || !selectedHouseName) {
+            alert("أدخل اسم الفريق واختر البيت أولاً!");
+            return;
+        }
+        document.getElementById('display-team').innerText = "المجموعة: " + team;
+        document.getElementById('display-house').innerText = "البيت: " + selectedHouseName;
+        document.getElementById('intro-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        loadStage();
+        startTimer();
+    }
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            let m = Math.floor(timeLeft / 60);
+            let s = timeLeft % 60;
+            document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (timeLeft-- <= 0) {
+                clearInterval(timerInterval);
+                alert("انتهى الوقت! قبض عليكم فولديمورت.");
+                location.reload();
+            }
+        }, 1000);
+    }
+
+    function loadStage() {
+        document.getElementById('stage-title').innerText = stages[currentStage-1].title;
+        document.getElementById('stage-content').innerHTML = `<div class="stage-box">${stages[currentStage-1].desc}</div>`;
+        document.getElementById('code-input').value = "";
+    }
+
+    function verifyCode() {
+        const input = document.getElementById('code-input').value.trim().toUpperCase();
+        const correctCode = stages[currentStage-1].code.toUpperCase();
+        
+        if (input === correctCode) {
+            if (currentStage < stages.length) {
+                alert("أحسنت! فككت التشفير بنجاح.");
+                currentStage++;
+                loadStage();
+            } else {
+                clearInterval(timerInterval);
+                document.body.innerHTML = `
+                    <div class="container">
+                        <h1 style="font-size: 3.5em; color:#ffd700;">🏆 انتصار ساحق!</h1>
+                        <p style="font-size: 1.5em; color:white;">لقد دمرتم فولديمورت وأنقذتم هوجوورتس بفضل معرفتكم بلغة الـ Module E!</p>
+                        <button onclick="location.reload()">العب مرة أخرى</button>
+                    </div>`;
+            }
+        } else {
+            alert("كود خاطئ! فكر في الإجابات جيداً.");
+        }
+    }
+</script>
+</body>
+</html>
